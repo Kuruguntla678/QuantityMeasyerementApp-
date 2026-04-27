@@ -34,45 +34,32 @@ public class QuantityMeasurementApp {
             this.unit = unit;
         }
 
-        public double convertTo(LengthUnit targetUnit) {
-            if (targetUnit == null) throw new IllegalArgumentException("Target unit null");
-
-            double feet = unit.toFeet(value);
-            return targetUnit.fromFeet(feet);
+        // UC6: add (result in first unit)
+        public Quantity add(Quantity other) {
+            return add(other, this.unit);
         }
 
-        public Quantity add(Quantity other) {
+        // ✅ UC7: add with explicit target unit
+        public Quantity add(Quantity other, LengthUnit targetUnit) {
             if (other == null) throw new IllegalArgumentException("Other cannot be null");
+            if (targetUnit == null) throw new IllegalArgumentException("Target unit cannot be null");
 
+            // convert both to base unit (feet)
             double thisFeet = unit.toFeet(this.value);
             double otherFeet = other.unit.toFeet(other.value);
+
+            // add
             double sumFeet = thisFeet + otherFeet;
 
-            double resultValue = unit.fromFeet(sumFeet);
+            // convert to target unit
+            double resultValue = targetUnit.fromFeet(sumFeet);
 
-            return new Quantity(resultValue, this.unit);
-        }
-
-        public static Quantity add(Quantity q1, Quantity q2) {
-            return q1.add(q2);
+            return new Quantity(resultValue, targetUnit);
         }
 
         @Override
         public String toString() {
             return "Quantity(" + value + ", " + unit + ")";
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (obj == null || getClass() != obj.getClass()) return false;
-
-            Quantity other = (Quantity) obj;
-
-            double f1 = unit.toFeet(value);
-            double f2 = other.unit.toFeet(other.value);
-
-            return Double.compare(f1, f2) == 0;
         }
     }
 
@@ -81,21 +68,18 @@ public class QuantityMeasurementApp {
         Quantity q1 = new Quantity(1.0, LengthUnit.FEET);
         Quantity q2 = new Quantity(12.0, LengthUnit.INCH);
 
-        System.out.println(q1.add(q2));
+        System.out.println(q1.add(q2, LengthUnit.FEET));
+        System.out.println(q1.add(q2, LengthUnit.INCH));
+        System.out.println(q1.add(q2, LengthUnit.YARD));
 
-        Quantity q3 = new Quantity(12.0, LengthUnit.INCH);
-        Quantity q4 = new Quantity(1.0, LengthUnit.FEET);
+        Quantity q3 = new Quantity(36.0, LengthUnit.INCH);
+        Quantity q4 = new Quantity(1.0, LengthUnit.YARD);
 
-        System.out.println(q3.add(q4));
+        System.out.println(q3.add(q4, LengthUnit.FEET));
 
-        Quantity q5 = new Quantity(1.0, LengthUnit.YARD);
-        Quantity q6 = new Quantity(3.0, LengthUnit.FEET);
+        Quantity q5 = new Quantity(2.54, LengthUnit.CENTIMETER);
+        Quantity q6 = new Quantity(1.0, LengthUnit.INCH);
 
-        System.out.println(q5.add(q6));
-
-        Quantity q7 = new Quantity(2.54, LengthUnit.CENTIMETER);
-        Quantity q8 = new Quantity(1.0, LengthUnit.INCH);
-
-        System.out.println(q7.add(q8));
+        System.out.println(q5.add(q6, LengthUnit.CENTIMETER));
     }
 }
