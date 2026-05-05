@@ -14,7 +14,6 @@ public class QuantityMeasurementApp {
         String getUnitName();
     }
 
-
     enum LengthUnit implements IMeasurable {
         FEET(12.0),
         INCHES(1.0);
@@ -73,6 +72,7 @@ public class QuantityMeasurementApp {
         }
     }
 
+
     static class Quantity<U extends IMeasurable> {
 
         private final double value;
@@ -88,18 +88,36 @@ public class QuantityMeasurementApp {
 
         public Quantity<U> convertTo(U targetUnit) {
             double base = unit.convertToBaseUnit(value);
-            double converted = targetUnit.convertFromBaseUnit(base);
-            return new Quantity<>(round(converted), targetUnit);
+            double result = targetUnit.convertFromBaseUnit(base);
+            return new Quantity<>(round(result), targetUnit);
         }
 
+
         public Quantity<U> add(Quantity<U> other, U targetUnit) {
-            double base1 = unit.convertToBaseUnit(value);
-            double base2 = other.unit.convertToBaseUnit(other.value);
+            validate(other);
+            double sum = toBase() + other.toBase();
+            return new Quantity<>(round(targetUnit.convertFromBaseUnit(sum)), targetUnit);
+        }
 
-            double sum = base1 + base2;
-            double result = targetUnit.convertFromBaseUnit(sum);
+        public Quantity<U> subtract(Quantity<U> other) {
+            return subtract(other, unit);
+        }
 
-            return new Quantity<>(round(result), targetUnit);
+        public Quantity<U> subtract(Quantity<U> other, U targetUnit) {
+            validate(other);
+            if (targetUnit == null) throw new IllegalArgumentException("Target unit null");
+
+            double result = toBase() - other.toBase();
+            return new Quantity<>(round(targetUnit.convertFromBaseUnit(result)), targetUnit);
+        }
+
+        public double divide(Quantity<U> other) {
+            validate(other);
+            double divisor = other.toBase();
+
+            if (divisor == 0) throw new ArithmeticException("Divide by zero");
+
+            return toBase() / divisor;
         }
 
         @Override
@@ -107,54 +125,53 @@ public class QuantityMeasurementApp {
             if (this == obj) return true;
             if (!(obj instanceof Quantity<?> other)) return false;
 
-            // Prevent cross-category comparison
             if (!unit.getClass().equals(other.unit.getClass())) return false;
 
-            double base1 = unit.convertToBaseUnit(value);
-            double base2 = other.unit.convertToBaseUnit(other.value);
-
-            return Double.compare(base1, base2) == 0;
+            return Double.compare(toBase(), other.toBase()) == 0;
         }
 
-        @Override
+        private double toBase() {
+            return unit.convertToBaseUnit(value);
+        }
+
+        private void validate(Quantity<U> other) {
+            if (other == null) throw new IllegalArgumentException("Null quantity");
+            if (!unit.getClass().equals(other.unit.getClass()))
+                throw new IllegalArgumentException("Different measurement types");
+        }
+
+        private double round(double v) {
+            return Math.round(v * 100.0) / 100.0;
+        }
+
         public String toString() {
             return "Quantity(" + value + ", " + unit.getUnitName() + ")";
-        }
-
-        private double round(double val) {
-            return Math.round(val * 100000.0) / 100000.0; // more precision for gallons
         }
     }
 
     public static void main(String[] args) {
 
-        Quantity<LengthUnit> l1 = new Quantity<>(1, LengthUnit.FEET);
-        Quantity<LengthUnit> l2 = new Quantity<>(12, LengthUnit.INCHES);
+        Quantity<LengthUnit> l1 = new Quantity<>(10, LengthUnit.FEET);
+        Quantity<LengthUnit> l2 = new Quantity<>(6, LengthUnit.INCHES);
 
-        System.out.println("Length Equal: " + l1.equals(l2));
-        System.out.println("Length Convert: " + l1.convertTo(LengthUnit.INCHES));
-        System.out.println("Length Add: " + l1.add(l2, LengthUnit.FEET));
+        System.out.println("Subtract Length: " + l1.subtract(l2));
+        System.out.println("Subtract Length (in inches): " + l1.subtract(l2, LengthUnit.INCHES));
+        System.out.println("Divide Length: " + l1.divide(new Quantity<>(2, LengthUnit.FEET)));
 
-        Quantity<WeightUnit> w1 = new Quantity<>(1, WeightUnit.KILOGRAM);
-        Quantity<WeightUnit> w2 = new Quantity<>(1000, WeightUnit.GRAM);
+        Quantity<WeightUnit> w1 = new Quantity<>(10, WeightUnit.KILOGRAM);
+        Quantity<WeightUnit> w2 = new Quantity<>(5000, WeightUnit.GRAM);
 
-        System.out.println("Weight Equal: " + w1.equals(w2));
-        System.out.println("Weight Convert: " + w1.convertTo(WeightUnit.GRAM));
-        System.out.println("Weight Add: " + w1.add(w2, WeightUnit.KILOGRAM));
+        System.out.println("Subtract Weight: " + w1.subtract(w2));
+        System.out.println("Divide Weight: " + w1.divide(new Quantity<>(5, WeightUnit.KILOGRAM)));
 
-        Quantity<VolumeUnit> v1 = new Quantity<>(1, VolumeUnit.LITRE);
-        Quantity<VolumeUnit> v2 = new Quantity<>(1000, VolumeUnit.MILLILITRE);
-        Quantity<VolumeUnit> v3 = new Quantity<>(1, VolumeUnit.GALLON);
+        Quantity<VolumeUnit> v1 = new Quantity<>(5, VolumeUnit.LITRE);
+        Quantity<VolumeUnit> v2 = new Quantity<>(500, VolumeUnit.MILLILITRE);
 
-        System.out.println("Volume Equal (L vs mL): " + v1.equals(v2));
-        System.out.println("Volume Equal (L vs Gallon): " + v1.equals(v3.convertTo(VolumeUnit.LITRE)));
+        System.out.println("Subtract Volume: " + v1.subtract(v2));
+        System.out.println("Divide Volume: " + v1.divide(new Quantity<>(10, VolumeUnit.LITRE)));
 
-        System.out.println("1 L to mL: " + v1.convertTo(VolumeUnit.MILLILITRE));
-        System.out.println("1 Gallon to L: " + v3.convertTo(VolumeUnit.LITRE));
+        System.out.println("Negative: " + v2.subtract(v1));
 
-        System.out.println("Add L + mL: " + v1.add(v2, VolumeUnit.LITRE));
-        System.out.println("Add L + Gallon in mL: " + v1.add(v3, VolumeUnit.MILLILITRE));
-
-        System.out.println("Length vs Volume: " + l1.equals(v1));
+        System.out.println("Zero: " + v1.subtract(new Quantity<>(5000, VolumeUnit.MILLILITRE)));
     }
 }
